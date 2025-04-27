@@ -399,10 +399,7 @@
             const password = document.getElementById('password').value;
             
             auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    // Signed in successfully
-                    showNotification('Successfully signed in!', 'success');
-                })
+               
                 .catch((error) => {
                     let errorMessage = 'An error occurred during sign in.';
                     switch (error.code) {
