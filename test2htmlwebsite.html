@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Baby Crib Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Fredoka+One&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root {
+            --primary-color: #FFB6C1; /* Baby pink */
+            --secondary-color: #87CEEB; /* Baby blue */
+            --accent-color: #98FB98; /* Mint green */
+        }
+
+        body {
+            font-family: 'Comic Neue', cursive;
+            background-color: #f0f9ff;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .auth-container {
+            max-width: 400px;
+            margin: 2rem auto;
+            padding: 2.5rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .auth-container h1 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .auth-container h2 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--secondary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .auth-container input {
+            width: 100%;
+            padding: 12px 15px;
+            margin: 10px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-family: 'Comic Neue', cursive;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .auth-container input:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.2);
+        }
+
+        .auth-container button {
+            width: 100%;
+            padding: 12px 20px;
+            margin: 15px 0;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Comic Neue', cursive;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .auth-container button:hover {
+            background-color: #ff9aab;
+            transform: translateY(-2px);
+        }
+
+        .auth-container p {
+            margin-top: 1.5rem;
+            color: #666;
+        }
+
+        .auth-container a {
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .auth-container a:hover {
+            color: #5c9eb5;
+        }
+
+        .logout-button {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Comic Neue', cursive;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .logout-button:hover {
+            background-color: #ff9aab;
+            transform: translateY(-2px);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .card h2 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+
+        .sensor-data {
+            display: flex;
+            justify-content: space-between;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #fff9f9;
+            border-radius: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            margin-right: 10px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--secondary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            background: #f8f8ff;
+            border-radius: 8px;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .mode-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            margin-left: 10px;
+            background-color: var(--accent-color);
+        }
+
+        .mode-indicator.manual {
+            background-color: #FFB6C1;
+        }
+
+        .mode-indicator.auto {
+            background-color: #87CEEB;
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Container -->
+    <div id="auth-container" class="auth-container">
+        <h1>👶 Smart Crib Monitor</h1>
+        <div id="auth-forms">
+            <!-- Sign In Form -->
+            <div id="signin-form">
+                <h2>Welcome Back!</h2>
+                <input type="email" id="email" placeholder="Email">
+                <input type="password" id="password" placeholder="Password">
+                <button onclick="signIn()">Sign In</button>
+                <p>New user? <a href="#" onclick="showSignUp()">Create Account</a></p>
+            </div>
+
+            <!-- Sign Up Form -->
+            <div id="signup-form" style="display: none;">
+                <h2>Create Your Account</h2>
+                <input type="email" id="signup-email" placeholder="Email">
+                <input type="password" id="signup-password" placeholder="Password">
+                <input type="password" id="confirm-password" placeholder="Confirm Password">
+                <button onclick="signUp()">Create Account</button>
+                <p>Already have an account? <a href="#" onclick="showSignIn()">Sign In</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="dashboard" style="display: none;">
+        <button class="logout-button" onclick="logout()">Logout</button>
+        <!-- Environmental Card -->
+        <div class="card">
+            <h2>🌡️ Environment</h2>
+            <div class="sensor-data">
+                <span>Temperature:</span>
+                <span id="temperature">--</span>
+            </div>
+            <div class="sensor-data">
+                <span>Humidity:</span>
+                <span id="humidity">--</span>
+            </div>
+        </div>
+
+        <!-- Crib Controls Card -->
+        <div class="card">
+            <h2>🛏️ Crib Controls</h2>
+            <div class="control-group">
+                <h3>Elevation</h3>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="elevation-mode" onchange="toggleControlMode('elevation')">
+                    <span class="slider"></span>
+                </label>
+                <span id="elevation-mode-indicator" class="mode-indicator auto">Auto</span>
+                <div id="elevation-controls"></div>
+            </div>
+
+            <div class="control-group">
+                <h3>Swinging</h3>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="swing-mode" onchange="toggleControlMode('swing')">
+                    <span class="slider"></span>
+                </label>
+                <span id="swing-mode-indicator" class="mode-indicator auto">Auto</span>
+                <div id="swing-controls"></div>
+            </div>
+        </div>
+
+        <!-- Lighting Card -->
+        <div class="card">
+            <h2>💡 Lighting</h2>
+            <label class="toggle-switch">
+                <input type="checkbox" id="light-mode" onchange="toggleControlMode('light')">
+                <span class="slider"></span>
+            </label>
+            <span id="light-mode-indicator" class="mode-indicator auto">Auto</span>
+            <div id="light-controls"></div>
+        </div>
+
+        <!-- History Card -->
+        <div class="card">
+            <h2>📜 Cry History</h2>
+            <div class="history-list" id="cry-history"></div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB365GFjy-QMrJeK1XMn7m0xw5bp_1yUzo",
+            authDomain: "smart-baby-crib-f9b6f.firebaseapp.com",
+            databaseURL: "https://smart-baby-crib-f9b6f-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "smart-baby-crib-f9b6f",
+            storageBucket: "smart-baby-crib-f9b6f.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abc123def456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // Authentication State Listener
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                showDashboard();
+                setupRealtimeListeners();
+            } else {
+                showAuth();
+            }
+        });
+
+        // Realtime Database Listeners
+        function setupRealtimeListeners() {
+            // Environmental Data
+            database.ref('latest').on('value', snapshot => {
+                const data = snapshot.val();
+                if (data) {
+                    document.getElementById('temperature').textContent = `${data.temperature}°C`;
+                    document.getElementById('humidity').textContent = `${data.humidity}%`;
+                }
+            });
+
+            // Cry History
+            database.ref('alerts/crying').on('value', snapshot => {
+                if (snapshot.exists()) {
+                    addCryHistoryEntry(snapshot.val());
+                }
+            });
+        }
+
+        // Control Functions
+        function toggleControlMode(type) {
+            const refPath = `/controls/manual_${type}`;
+            const isManual = document.getElementById(`${type}-mode`).checked;
+            const indicator = document.getElementById(`${type}-mode-indicator`);
+            
+            database.ref(refPath).set(isManual);
+            
+            if (isManual) {
+                indicator.textContent = 'Manual';
+                indicator.classList.remove('auto');
+                indicator.classList.add('manual');
+            } else {
+                indicator.textContent = 'Auto';
+                indicator.classList.remove('manual');
+                indicator.classList.add('auto');
+            }
+        }
+
+        // History Management
+        function addCryHistoryEntry(timestamp) {
+            const historyDiv = document.getElementById('cry-history');
+            const entry = document.createElement('div');
+            entry.className = 'history-item';
+            entry.textContent = new Date(timestamp).toLocaleString();
+            historyDiv.prepend(entry);
+        }
+
+        // Authentication Functions
+        function signIn() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Signed in successfully
+                    showNotification('Successfully signed in!', 'success');
+                })
+                .catch((error) => {
+                    let errorMessage = 'An error occurred during sign in.';
+                    switch (error.code) {
+                        case 'auth/user-not-found':
+                            errorMessage = 'No account found with this email.';
+                            break;
+                        case 'auth/wrong-password':
+                            errorMessage = 'Incorrect password.';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage = 'Invalid email format.';
+                            break;
+                    }
+                    showNotification(errorMessage, 'error');
+                });
+        }
+
+        function signUp() {
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const confirm = document.getElementById('confirm-password').value;
+            
+            if (password !== confirm) {
+                showNotification('Passwords do not match!', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showNotification('Password must be at least 6 characters long!', 'error');
+                return;
+            }
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // User created successfully
+                    const user = userCredential.user;
+                    
+                    // Store additional user data in the database
+                    database.ref('users/' + user.uid).set({
+                        email: email,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                    
+                    showNotification('Account created successfully!', 'success');
+                    showSignIn();
+                })
+                .catch((error) => {
+                    let errorMessage = 'An error occurred during sign up.';
+                    switch (error.code) {
+                        case 'auth/email-already-in-use':
+                            errorMessage = 'This email is already registered.';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage = 'Invalid email format.';
+                            break;
+                        case 'auth/weak-password':
+                            errorMessage = 'Password is too weak.';
+                            break;
+                    }
+                    showNotification(errorMessage, 'error');
+                });
+        }
+
+        // UI Helpers
+        function showDashboard() {
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'grid';
+        }
+
+        function showAuth() {
+            document.getElementById('auth-container').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+
+        function showSignUp() {
+            document.getElementById('signin-form').style.display = 'none';
+            document.getElementById('signup-form').style.display = 'block';
+        }
+
+        function showSignIn() {
+            document.getElementById('signup-form').style.display = 'none';
+            document.getElementById('signin-form').style.display = 'block';
+        }
+
+        // Logout Function
+        function logout() {
+            auth.signOut().then(() => {
+                showAuth();
+                showSignIn();
+            }).catch((error) => {
+                console.error('Logout failed:', error);
+            });
+        }
+
+        // Notification System
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Add notification styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .notification {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 10px;
+                color: white;
+                font-family: 'Comic Neue', cursive;
+                font-weight: bold;
+                animation: slideIn 0.3s ease-out;
+                z-index: 1000;
+            }
+            
+            .notification.success {
+                background-color: #4CAF50;
+            }
+            
+            .notification.error {
+                background-color: #f44336;
+            }
+            
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
